@@ -18,11 +18,11 @@ def read(file, category):
     total = len(words)
     correct = 0
     for word in words:
-        data.append([word, categorize(word), category])
+        data.append([word, categorize(word), category, categorize(word) == category])
         if categorize(word) == category:
             correct += 1
     accuracy = 100 * correct/total
-    df = pd.DataFrame(data, columns = ['Word', 'Guessed Category', 'Correct Category'])
+    df = pd.DataFrame(data, columns=['Word', 'Guessed Category', 'Correct Category', 'Correct Guess'])
     df.to_csv(f'output/{category}-results.csv', index=False)
 
     print(f'Correctly guessed {correct} out of {total} words')
