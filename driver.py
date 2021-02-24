@@ -1,6 +1,7 @@
 import grader
 import preprocessing
 import recall
+import basilisk
 
 OUTPUT_PATH = 'output\\test.txt'
 NEWS_PATH = 'data\\20news\\'
@@ -8,8 +9,9 @@ CATEGORIES = ['noun.person', 'noun.animal', 'noun.plant',
                 'noun.location', 'noun.group', 'noun.food']
 OPTIONS = {
     'recall': False,
-    'preprocessing': False,
-    'grading': True
+    'preprocessing': True,
+    'extraction': False,
+    'grading': False
 }
 
 def main():
@@ -19,6 +21,10 @@ def main():
     if OPTIONS['recall']:
         for category in CATEGORIES:
             recall.compileCategoryWords(NEWS_PATH, category)
+
+    if OPTIONS['extraction']:
+        for category in CATEGORIES:
+            basilisk.extract(category)
 
     if OPTIONS['grading']:
         grader.read(OUTPUT_PATH, 'noun.person')

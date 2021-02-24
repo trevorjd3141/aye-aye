@@ -1,6 +1,7 @@
 from os.path import join
 import pandas as pd
 import re
+import util
 
 def cleanText(text):
     # Replace any weird forum chars
@@ -19,6 +20,7 @@ def cleanText(text):
 
 def extract(path):
     categoryDFs = []
+    allText = ''
     for directory in util.allDirectories(path):
         data = []
         for file in util.allFiles(join(path, directory)):
@@ -28,6 +30,11 @@ def extract(path):
             text = ' '.join(util.fetchLines(filePath)[2:])
             text = cleanText(text)
             data.append([directory, file, text])
+            allText += f'\n {text}'
         categoryDFs.append(pd.DataFrame(data, columns=['Category', 'File', 'Text']))
     concatDF = pd.concat(categoryDFs)
     concatDF.to_csv('data/compiledText.csv', index=False)
+    
+    textOutput = open(f'data/compiledText.txt', 'w')
+    textOutput.write(allText) 
+    textOutput.close() 
