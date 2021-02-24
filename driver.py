@@ -5,8 +5,7 @@ import recall
 OUTPUT_PATH = 'output\\test.txt'
 NEWS_PATH = 'data\\20news\\'
 CATEGORIES = ['noun.person', 'noun.animal', 'noun.plant',
-                'noun.plant', 'noun.location', 'noun.group',
-                'noun.food']
+                'noun.location', 'noun.group', 'noun.food']
 OPTIONS = {
     'recall': False,
     'preprocessing': False,
