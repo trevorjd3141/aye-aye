@@ -1,6 +1,7 @@
 output/*.csv
 output/*.txt
 data/*
+scrap/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
