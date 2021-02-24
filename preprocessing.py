@@ -1,11 +1,6 @@
-from os import listdir
-from os.path import isfile, join
+from os.path import join
 import pandas as pd
 import re
-
-def fetchLines(path):
-    file = open(path, 'r')
-    return [line.strip().lower() for line in file.readlines() if line.strip() != '']
 
 def cleanText(text):
     # Replace any weird forum chars
@@ -22,21 +17,15 @@ def cleanText(text):
 
     return text
 
-def allDirectories(path):
-    return [file for file in listdir(path) if not isfile(join(path, file))]
-
-def allFiles(path):
-    return [file for file in listdir(path) if isfile(join(path, file))]
-
 def extract(path):
     categoryDFs = []
-    for directory in allDirectories(path):
+    for directory in util.allDirectories(path):
         data = []
-        for file in allFiles(join(path, directory)):
+        for file in util.allFiles(join(path, directory)):
             filePath = join(path, directory, file)
 
             # Remove the first two lines as they are irrelevant headers
-            text = ' '.join(fetchLines(filePath)[2:])
+            text = ' '.join(util.fetchLines(filePath)[2:])
             text = cleanText(text)
             data.append([directory, file, text])
         categoryDFs.append(pd.DataFrame(data, columns=['Category', 'File', 'Text']))
