@@ -30,7 +30,7 @@ def extract(path):
             text = ' '.join(util.fetchLines(filePath)[2:])
             text = cleanText(text)
             data.append([directory, file, text])
-            allText += f'\n {text}'
+            allText += f'\n{text}'
         categoryDFs.append(pd.DataFrame(data, columns=['Category', 'File', 'Text']))
     concatDF = pd.concat(categoryDFs)
     concatDF.to_csv('data/compiledText.csv', index=False)
