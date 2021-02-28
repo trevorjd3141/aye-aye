@@ -24,7 +24,7 @@ def main():
 
     if OPTIONS['extraction']:
         for category in CATEGORIES:
-            basilisk.extract(category)
+            basilisk.basilisk(category)
 
     if OPTIONS['grading']:
         grader.read(OUTPUT_PATH, 'noun.person')
