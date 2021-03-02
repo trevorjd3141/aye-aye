@@ -3,15 +3,18 @@ import preprocessing
 import recall
 import basilisk
 
-OUTPUT_PATH = 'output\\test.txt'
+OUTPUT_PATH = 'output\\'
 NEWS_PATH = 'data\\20news\\'
+"""
 CATEGORIES = ['noun.person', 'noun.animal', 'noun.plant',
                 'noun.location', 'noun.group', 'noun.food']
+"""
+CATEGORIES = ['noun.person']
 OPTIONS = {
     'recall': False,
-    'preprocessing': True,
-    'extraction': False,
-    'grading': False
+    'preprocessing': False,
+    'extraction': True,
+    'grading': True
 }
 
 def main():
@@ -24,10 +27,11 @@ def main():
 
     if OPTIONS['extraction']:
         for category in CATEGORIES:
-            basilisk.basilisk(category)
+            basilisk.basilisk(category, OUTPUT_PATH, True)
 
     if OPTIONS['grading']:
-        grader.read(OUTPUT_PATH, 'noun.person')
+        for category in CATEGORIES:
+            grader.read(OUTPUT_PATH, category)
 
 if __name__ == "__main__":
     main()

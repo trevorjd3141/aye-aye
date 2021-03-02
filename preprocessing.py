@@ -2,6 +2,11 @@ from os.path import join
 import pandas as pd
 import re
 import util
+import spacy
+nlp = spacy.load("en_core_web_md")
+
+SAMPLE_SIZE = 4000
+ANNOTATIONS_PATH = 'data\\annotations\\'
 
 def cleanText(text):
     # Replace any weird forum chars
@@ -32,8 +37,14 @@ def extract(path):
             data.append([directory, file, text])
             allText += f'\n{text}'
         categoryDFs.append(pd.DataFrame(data, columns=['Category', 'File', 'Text']))
+        print(directory)
     concatDF = pd.concat(categoryDFs)
+    concatDF = concatDF.sample(n=SAMPLE_SIZE)
     concatDF.to_csv('data/compiledText.csv', index=False)
+
+    for text, file in zip(concatDF['Text'], concatDF['File']):
+        doc = nlp(text)
+        doc.to_disk(f'{ANNOTATIONS_PATH}{file}')
     
     textOutput = open(f'data/compiledText.txt', 'w')
     textOutput.write(allText) 

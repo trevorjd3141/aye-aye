@@ -2,11 +2,14 @@ import util
 import pandas as pd
 
 def calculateFScore(recall, precision):
-    return (2 * recall * precision)/(precision + recall)
+    if (recall + precision) == 0:
+        return 0.00
+    score = (2 * recall * precision)/(precision + recall)
+    return round(score, 3)
 
 # Reads in a results file and tests its accuracy
-def read(file, category):
-    words = util.fetchLines(file)
+def read(path, category):
+    words = util.fetchLines(f'{path}{category}.txt')
 
     data = []
     total = len(words)
@@ -18,7 +21,7 @@ def read(file, category):
     precision = correct/total
     accuracy = 100 * precision
     df = pd.DataFrame(data, columns=['Word', 'Guessed Category', 'Correct Category', 'Correct Guess'])
-    df.to_csv(f'output\\{category}-results.csv', index=False)
+    df.to_csv(f'{path}{category}-results.csv', index=False)
 
     print(f'Correctly guessed {correct} out of {total} words')
     print(f'For a total accuracy of {round(accuracy, 3)}%')
