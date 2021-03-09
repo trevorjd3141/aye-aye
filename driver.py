@@ -1,37 +1,33 @@
+from os.path import join
+
 import grader
 import preprocessing
 import recall
 import basilisk
 
 OUTPUT_PATH = 'output\\'
-NEWS_PATH = 'data\\20news\\'
-"""
-CATEGORIES = ['noun.person', 'noun.animal', 'noun.plant',
-                'noun.location', 'noun.group', 'noun.food']
-"""
-CATEGORIES = ['noun.person']
+PROCESSED_DATA_NAME = 'processed_data.csv'
+DATA_PATH = 'data\\'
+CATEGORY = 'noun.food'
 OPTIONS = {
-    'recall': False,
-    'preprocessing': False,
-    'extraction': True,
-    'grading': True
+    'preprocessing': True,
+    'recall': True,
+    'extraction': False,
+    'grading': False
 }
 
 def main():
     if OPTIONS['preprocessing']:
-        preprocessing.extract(NEWS_PATH)
+        preprocessing.compile(DATA_PATH, PROCESSED_DATA_NAME)
 
     if OPTIONS['recall']:
-        for category in CATEGORIES:
-            recall.compileCategoryWords(NEWS_PATH, category)
+        recall.compileCategoryWords(join(DATA_PATH, PROCESSED_DATA_NAME), CATEGORY)
 
     if OPTIONS['extraction']:
-        for category in CATEGORIES:
-            basilisk.basilisk(category, OUTPUT_PATH, True)
+        basilisk.basilisk(CATEGORY, OUTPUT_PATH, True)
 
     if OPTIONS['grading']:
-        for category in CATEGORIES:
-            grader.read(OUTPUT_PATH, category)
+        grader.read(OUTPUT_PATH, CATEGORY)
 
 if __name__ == "__main__":
     main()

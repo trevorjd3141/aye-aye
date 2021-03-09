@@ -9,11 +9,11 @@ nlp = spacy.load("en_core_web_md")
 
 PATTERN_POOL_INIT_SIZE = 20
 WORDS_PER_ROUND = 3
-LOOPS = 3
+LOOPS = 2
 MIN_WINDOW_SIZE=3
 MAX_WINDOW_SIZE=6
-SAMPLE_SIZE = 600
-ANNOTATIONS_PATH = 'data\\annotations\\'
+SAMPLE_SIZE = 250
+DATA_PATH = 'data\\'
 
 def AvgLog(patterns, category, lexicon):
     # Creates a list of lists containing only category members
