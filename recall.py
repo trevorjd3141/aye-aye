@@ -6,12 +6,12 @@ import pandas as pd
 
 def compileCategoryWords(path, category):
     categoryWords = set()
-    sr = pd.read_csv(path, squeeze=True)
-    for text in sr:
+    texts = pd.read_csv(path, squeeze=True)
+    for text in texts:
         words = text.split()
         for word in words:
             if util.categorize(word) == category:
-                categoryWords.add(word)
+                categoryWords.add(word.lower())
     output = open(f'recall/{category}.txt', 'w')
     for word in categoryWords:
         output.write(f'{word}\n') 
