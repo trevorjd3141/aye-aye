@@ -6,6 +6,7 @@ import spacy
 nlp = spacy.load("en_core_web_md")
 import numpy as np
 from datetime import datetime
+from collections import defaultdict
 
 PATTERN_POOL_INIT_SIZE = 20
 WORDS_PER_ROUND = 5
@@ -47,35 +48,44 @@ def basilisk(category, output, path, development=False):
 
     seeds = util.fetchLines(f'seeds/{category}.seed')
     lexicon = set(seeds)
+
     texts = pd.read_csv(path, squeeze=True)
     sampledTexts = texts.sample(n=SAMPLE_SIZE)
-
-    # Split sampledTexts into series of size <= MAX_TEXT_SIZE
+    # Split sampledTexts into series of size <= MAX_TEXT_SIZE and finalize them into a list of docs
     splitSampledTexts = np.split(sampledTexts, [MAX_TEXT_SIZE*(i+1) for i in range(SAMPLE_SIZE//MAX_TEXT_SIZE)])
     joinedSampledTexts = ['. '.join(text) for text in splitSampledTexts]
     docs = [nlp(text) for text in joinedSampledTexts]
+
+    extractedPatternsDict = defaultdict(set)
+
+    if development:
+        print('Loading Done')
+
     for iteration in range(LOOPS):
         
         if development:
             print(f'Starting Loop {iteration+1} for category {category}'), 
-            print('1: Loading Done')
 
         allPatterns = set()
         for doc in docs:
             allPatterns.update(autoslog.extractPatterns(doc, lexicon))
 
         if development:
-            print('2: Patterns Extracted')
+            print('1: Patterns Extracted')
 
         extractedPatterns = []
         for pattern in allPatterns:
-            extractedPattern = set()
-            for doc in docs:
-                extractedPattern.update(extract(doc, pattern))
-            extractedPatterns.append((pattern, extractedPattern))
+            if pattern in extractedPatternsDict:
+                extractedPatterns.append((pattern, extractedPatternsDict[pattern]))
+            else:
+                extractedPattern = set()
+                for doc in docs:
+                    extractedPattern.update(extract(doc, pattern))
+                extractedPatternsDict[pattern] = extractedPattern
+                extractedPatterns.append((pattern, extractedPattern))
 
         if development:
-            print('3: Extraction Done on All Potential Patterns')
+            print('2: Extraction Done on All Potential Patterns')
 
         scoredPatterns = []
         for patternSet in extractedPatterns:
@@ -84,7 +94,7 @@ def basilisk(category, output, path, development=False):
         scoredPatterns.sort(key=lambda x: x[2], reverse=True)
 
         if development:
-            print('4: Patterns Scored and Trimmed')
+            print('3: Patterns Scored and Trimmed')
 
         chosenPatterns = scoredPatterns[:PATTERN_POOL_INIT_SIZE + iteration]
         candidateWords = set().union(*[chosenPattern[1] for chosenPattern in chosenPatterns])
@@ -100,7 +110,7 @@ def basilisk(category, output, path, development=False):
         lexicon = lexicon.union({word[0] for word in chosenWords})
 
         if development:
-            print('5: Words Scored and Trimmed')
+            print('4: Words Scored and Trimmed')
             print(chosenWords)
             print()
 
