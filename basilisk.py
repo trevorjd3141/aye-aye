@@ -3,17 +3,15 @@ import autoslog
 import pandas as pd
 import math
 import spacy
-from spacy.tokens import Doc
-from spacy.vocab import Vocab
 nlp = spacy.load("en_core_web_md")
+import numpy as np
+from datetime import datetime
 
 PATTERN_POOL_INIT_SIZE = 20
-WORDS_PER_ROUND = 3
-LOOPS = 2
-MIN_WINDOW_SIZE=3
-MAX_WINDOW_SIZE=6
-SAMPLE_SIZE = 250
-DATA_PATH = 'data\\'
+WORDS_PER_ROUND = 5
+LOOPS = 10
+SAMPLE_SIZE = 10000
+MAX_TEXT_SIZE = 1500
 
 def AvgLog(patterns, category, lexicon):
     # Creates a list of lists containing only category members
@@ -37,80 +35,44 @@ def RlogF(words, category, lexicon):
 
     return round(score, 3)
 
-def extract(text, docPath, pattern):
-    patternWords = [token[0] for token in pattern]
-
-    # Exit early if word can't be found
-    # in the text
-    for word in patternWords:
-        if word == '_WORD_':
-            continue
-
-        if word not in text:
-            return set()
-
-    doc = Doc(Vocab()).from_disk(docPath) 
-    size = len(pattern)
-
-    # Index of the word within the pattern
-    wordIndex = patternWords.index('_WORD_')
-
-    # The word's dependency
-    wordDep = pattern[wordIndex][1]
-
-    # The pattern minus the word
-    patternWithoutWord = tuple([pair for pair in pattern if pair[0] != '_WORD_'])
-
+def extract(doc, pattern):
     extractions = set()
-    for sent in doc.sents:
-        
-        # Exit early if all pattern words aren't in the sentence
-        sentWords = { word.text for word in sent }
-        if not all([word in sentWords for word in patternWords if word != '_WORD_']):
-            continue
-
-        for i in range(len(sent) - size + 1):
-            window = [(word.text, word.dep_) for word in sent][i: i + size]
-            extraction = window[wordIndex]
-            extractionText = extraction[0]
-            extractionDep = extraction[1]
-            del window[wordIndex]
-            window = tuple(window)
-
-            if window == patternWithoutWord and extractionDep == wordDep:
-                extractions.add(extractionText)
+    for word in doc:
+        if (word.head.text, word.dep_) == pattern:
+            extractions.add(word.text)
     return extractions
 
-def basilisk(category, output, development=False):
+def basilisk(category, output, path, development=False):
+    print("Start Time:", datetime.now().strftime("%H:%M:%S"))
+
     seeds = util.fetchLines(f'seeds/{category}.seed')
     lexicon = set(seeds)
-    textDF = pd.read_csv('data/compiledText.csv')
-    textDF = textDF.sample(n=SAMPLE_SIZE)
-    textDF.dropna(inplace=True)
+    texts = pd.read_csv(path, squeeze=True)
+    sampledTexts = texts.sample(n=SAMPLE_SIZE)
 
+    # Split sampledTexts into series of size <= MAX_TEXT_SIZE
+    splitSampledTexts = np.split(sampledTexts, [MAX_TEXT_SIZE*(i+1) for i in range(SAMPLE_SIZE//MAX_TEXT_SIZE)])
+    joinedSampledTexts = ['. '.join(text) for text in splitSampledTexts]
+    docs = [nlp(text) for text in joinedSampledTexts]
     for iteration in range(LOOPS):
         
         if development:
             print(f'Starting Loop {iteration+1} for category {category}'), 
             print('1: Loading Done')
 
-        allPatterns = []
-        for file in textDF['File']:
-            doc = Doc(Vocab()).from_disk(f'{ANNOTATIONS_PATH}{file}')
-            patterns = autoslog.extractPatterns(doc, lexicon, MIN_WINDOW_SIZE, MAX_WINDOW_SIZE)
-            allPatterns.append(patterns)
-        allPatterns = set().union(*allPatterns)
+        allPatterns = set()
+        for doc in docs:
+            allPatterns.update(autoslog.extractPatterns(doc, lexicon))
 
         if development:
             print('2: Patterns Extracted')
 
         extractedPatterns = []
         for pattern in allPatterns:
-            allExtractedWords = []
-            for text, file in zip(textDF['Text'], textDF['File']):
-                allExtractedWords.append(extract(text, f'{ANNOTATIONS_PATH}{file}', pattern))
-            allExtractedWords = set().union(*allExtractedWords)
-            extractedPatterns.append((pattern, allExtractedWords))
+            extractedPattern = set()
+            for doc in docs:
+                extractedPattern.update(extract(doc, pattern))
+            extractedPatterns.append((pattern, extractedPattern))
 
         if development:
             print('3: Extraction Done on All Potential Patterns')
@@ -149,4 +111,5 @@ def basilisk(category, output, development=False):
     file = open(f'{output}{category}.txt','w')
     for word in generatedWords:
         file.write(f'{word}\n')
-    file.close() 
+    file.close()
+    print("End Time:", datetime.now().strftime("%H:%M:%S"))
