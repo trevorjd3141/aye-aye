@@ -7,8 +7,11 @@ import basilisk
 import seedSelector
 
 OUTPUT_PATH = 'output\\'
-PROCESSED_DATA_NAME = 'processed_data.csv'
 DATA_PATH = 'data\\'
+PROCESSED_DATA_NAME = 'processed_data.csv'
+PROCESSED_DATA = join(DATA_PATH, PROCESSED_DATA_NAME)
+PICKLE = join(DATA_PATH, 'extractions.p')
+DOCS = join(DATA_PATH, 'docs.p')
 CATEGORY = 'noun.food'
 OPTIONS = {
     'preprocessing': False,
@@ -20,16 +23,16 @@ OPTIONS = {
 
 def main():
     if OPTIONS['preprocessing']:
-        preprocessing.compile(DATA_PATH, PROCESSED_DATA_NAME)
+        preprocessing.compile(DATA_PATH, PROCESSED_DATA_PATH)
 
     if OPTIONS['seed-selection']:
-        seedSelector.compileCommonWords(join(DATA_PATH, PROCESSED_DATA_NAME), CATEGORY)
+        seedSelector.compileCommonWords(PROCESSED_DATA, CATEGORY)
 
     if OPTIONS['recall']:
-        recall.compileCategoryWords(join(DATA_PATH, PROCESSED_DATA_NAME), CATEGORY)
+        recall.compileCategoryWords(PROCESSED_DATA, CATEGORY)
 
     if OPTIONS['extraction']:
-        basilisk.basilisk(CATEGORY, OUTPUT_PATH, join(DATA_PATH, PROCESSED_DATA_NAME), True)
+        basilisk.basilisk(CATEGORY, OUTPUT_PATH, PROCESSED_DATA, PICKLE, DOCS, True)
 
     if OPTIONS['grading']:
         grader.read(OUTPUT_PATH, CATEGORY)

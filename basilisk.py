@@ -1,5 +1,3 @@
-import util
-import autoslog
 import pandas as pd
 import math
 import spacy
@@ -7,12 +5,16 @@ nlp = spacy.load("en_core_web_md")
 import numpy as np
 from datetime import datetime
 from collections import defaultdict
+import pickle
+from os.path import isfile 
+
+import util
+import autoslog
 
 PATTERN_POOL_INIT_SIZE = 20
 WORDS_PER_ROUND = 5
-LOOPS = 10
-SAMPLE_SIZE = 10000
-MAX_TEXT_SIZE = 1500
+LOOPS = 15
+MAX_TEXT_SIZE = 2000
 
 def AvgLog(patterns, category, lexicon):
     # Creates a list of lists containing only category members
@@ -40,26 +42,43 @@ def extract(doc, pattern):
     extractions = set()
     for word in doc:
         if (word.head.text, word.dep_) == pattern:
-            extractions.add(word.text)
+            # Make sure to add compound words together like boy choy instead of choy
+            compounds = [child.text for child in word.lefts if child.dep_ == 'compound']
+            compoundWord = ' '.join(compounds + [word.text])
+            extractions.add(compoundWord)
     return extractions
 
-def basilisk(category, output, path, development=False):
+def basilisk(category, output, path, picklePath, docsPath, development=False):
     print("Start Time:", datetime.now().strftime("%H:%M:%S"))
 
     seeds = util.fetchLines(f'seeds/{category}.seed')
     lexicon = set(seeds)
-
+    print('Reading CSV')
     texts = pd.read_csv(path, squeeze=True)
-    sampledTexts = texts.sample(n=SAMPLE_SIZE)
+    texts.dropna(inplace=True)
     # Split sampledTexts into series of size <= MAX_TEXT_SIZE and finalize them into a list of docs
-    splitSampledTexts = np.split(sampledTexts, [MAX_TEXT_SIZE*(i+1) for i in range(SAMPLE_SIZE//MAX_TEXT_SIZE)])
-    joinedSampledTexts = ['. '.join(text) for text in splitSampledTexts]
-    docs = [nlp(text) for text in joinedSampledTexts]
+    print('Performing Dependency Parsing')
+    splitTexts = np.split(texts, [MAX_TEXT_SIZE*(i+1) for i in range(len(texts)//MAX_TEXT_SIZE)])
+    joinedTexts = ['. '.join(text) for text in splitTexts]
 
-    extractedPatternsDict = defaultdict(set)
+    # Check to see if NLP has been done already
+    if isfile(docsPath):
+        with open(docsPath, 'rb') as file: 
+            docs = pickle.load(file) 
+    else:
+        docs = [nlp(text) for text in joinedTexts]
+        with open(docsPath, 'wb') as file:
+            pickle.dump(docs, file) 
+    
+    # Check for already extraced patterns
+    if isfile(picklePath):
+        with open(picklePath, 'rb') as file: 
+            extractedPatternsDict = pickle.load(file) 
+    else:
+        extractedPatternsDict = defaultdict(set)
 
     if development:
-        print('Loading Done')
+        print('Pre Processing Done')
 
     for iteration in range(LOOPS):
         
@@ -74,6 +93,8 @@ def basilisk(category, output, path, development=False):
             print('1: Patterns Extracted')
 
         extractedPatterns = []
+        length = len(allPatterns)
+        progress = 0
         for pattern in allPatterns:
             if pattern in extractedPatternsDict:
                 extractedPatterns.append((pattern, extractedPatternsDict[pattern]))
@@ -83,6 +104,9 @@ def basilisk(category, output, path, development=False):
                     extractedPattern.update(extract(doc, pattern))
                 extractedPatternsDict[pattern] = extractedPattern
                 extractedPatterns.append((pattern, extractedPattern))
+            if progress % 100 == 0 and iteration == 0:
+                print(f'{(progress/length)*100}% of the way done on first load.')
+            progress += 1
 
         if development:
             print('2: Extraction Done on All Potential Patterns')
@@ -118,8 +142,14 @@ def basilisk(category, output, path, development=False):
     generatedWords = lexicon.difference(set(seeds))
     print(lexicon.difference(set(seeds)))
     print()
+
+    # Write the output of generated words
     file = open(f'{output}{category}.txt','w')
     for word in generatedWords:
         file.write(f'{word}\n')
     file.close()
+
+    # Save pattern extractions for next time
+    with open(picklePath, 'wb') as file: 
+        pickle.dump(extractedPatternsDict, file) 
     print("End Time:", datetime.now().strftime("%H:%M:%S"))
