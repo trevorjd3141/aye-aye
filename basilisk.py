@@ -50,7 +50,6 @@ def extract(doc, pattern):
 
 def basilisk(category, output, path, picklePath, docsPath, development=False):
     print("Start Time:", datetime.now().strftime("%H:%M:%S"))
-
     seeds = util.fetchLines(f'seeds/{category}.seed')
     lexicon = set(seeds)
     print('Reading CSV')
@@ -93,8 +92,6 @@ def basilisk(category, output, path, picklePath, docsPath, development=False):
             print('1: Patterns Extracted')
 
         extractedPatterns = []
-        length = len(allPatterns)
-        progress = 0
         for pattern in allPatterns:
             if pattern in extractedPatternsDict:
                 extractedPatterns.append((pattern, extractedPatternsDict[pattern]))
@@ -104,9 +101,6 @@ def basilisk(category, output, path, picklePath, docsPath, development=False):
                     extractedPattern.update(extract(doc, pattern))
                 extractedPatternsDict[pattern] = extractedPattern
                 extractedPatterns.append((pattern, extractedPattern))
-            if progress % 100 == 0 and iteration == 0:
-                print(f'{(progress/length)*100}% of the way done on first load.')
-            progress += 1
 
         if development:
             print('2: Extraction Done on All Potential Patterns')
