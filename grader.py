@@ -20,7 +20,7 @@ def read(path, category):
             correct += 1
     precision = correct/total
     accuracy = 100 * precision
-    df = pd.DataFrame(data, columns=['Word', 'Guessed Category', 'Correct Category', 'Correct Guess'])
+    df = pd.DataFrame(data, columns=['Word', 'Correct Category', 'Guessed Category', 'Correct Guess'])
     df.to_csv(f'{path}{category}-results.csv', index=False)
 
     print(f'Correctly guessed {correct} out of {total} words')
