@@ -1,7 +1,7 @@
 import pandas as pd
 
-def truncate(processedPath, truncatedPath, documents=50000):
-    df = pd.read_csv(processedPath)
+def truncate(processed_path, truncated_path, count=50000):
+    df = pd.read_csv(processed_path)
     df.dropna(inplace=True)
-    df = df.sample(n=documents)
-    df.to_csv(truncatedPath, index=False)
+    df = df.sample(n=count)
+    df.to_csv(truncated_path, index=False)

@@ -3,8 +3,8 @@ from os.path import join
 import preprocessing
 import truncation
 import recall
-import seedSelector
-import basilisk
+import seed_selector
+import aye_aye
 import grader
 
 OUTPUT_PATH = 'output\\'
@@ -16,12 +16,13 @@ TRUNCATED_DATA = join(DATA_PATH, TRUNCATED_DATA_NAME)
 PICKLE = join(DATA_PATH, 'extractions.p')
 DOCS = join(DATA_PATH, 'docs.p')
 CATEGORY = 'noun.food'
+TRUNCATED_COUNT = 24000
 OPTIONS = {
     'preprocessing': False,
     'truncation': False,
     'seed-selection': False,
     'recall': False,
-    'extraction': True,
+    'extraction': False,
     'grading': True
 }
 
@@ -30,16 +31,16 @@ def main():
         preprocessing.compile(DATA_PATH, PROCESSED_DATA_NAME)
 
     if OPTIONS['truncation']:
-        truncation.truncate(PROCESSED_DATA, TRUNCATED_DATA)
+        truncation.truncate(PROCESSED_DATA, TRUNCATED_DATA, TRUNCATED_COUNT)
 
     if OPTIONS['seed-selection']:
-        seedSelector.compileCommonWords(TRUNCATED_DATA, CATEGORY)
+        seed_selector.compile_common_words(TRUNCATED_DATA, CATEGORY)
 
     if OPTIONS['recall']:
-        recall.compileCategoryWords(TRUNCATED_DATA, CATEGORY)
+        recall.compile_category_words(TRUNCATED_DATA, CATEGORY)
 
     if OPTIONS['extraction']:
-        basilisk.basilisk(CATEGORY, OUTPUT_PATH, TRUNCATED_DATA, PICKLE, DOCS, True)
+        aye_aye.aye_aye(CATEGORY, OUTPUT_PATH, TRUNCATED_DATA, PICKLE, DOCS, True)
 
     if OPTIONS['grading']:
         grader.read(OUTPUT_PATH, CATEGORY)
