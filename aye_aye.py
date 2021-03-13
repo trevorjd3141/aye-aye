@@ -1,11 +1,14 @@
 import pandas as pd
 import math
 import spacy
+from spacy.matcher import DependencyMatcher
 nlp = spacy.load("en_core_web_md")
+matcher = DependencyMatcher(nlp.vocab)
 from datetime import datetime
 from collections import defaultdict
 import pickle
-from os.path import isfile 
+from os.path import isfile
+from itertools import chain
 
 import util
 import pattern_generation
@@ -18,6 +21,7 @@ MAX_TEXT_SIZE = 2000
 # Options for filtering what patterns autoslog will return
 LEFT_TOKENS=2
 PARENT_TOKENS=2
+RIGHT_TOKENS=0
 MIN_PATTERN_COMPLEXITY=1
 MAX_PATTERN_COMPLEXITY=4
 
@@ -43,34 +47,52 @@ def r_log_f(words, category, lexicon):
 
     return round(score, 3)
 
+def convert_to_dependency_pattern(original_pattern):
+    target, lefts, parents, rights = original_pattern
+    target_text, target_dep = target
+    target_id = f'{target_text}-{target_dep}'
+    dependency_pattern = [{'RIGHT_ID': target_id, 'RIGHT_ATTRS': {'DEP': target_dep}}]
+    for unit in chain(lefts, rights):
+        unit_text, unit_dep = unit
+        pattern_unit = {
+            'LEFT_ID': target_id,
+            'REL_OP': '>',
+            'RIGHT_ID': f'{unit_text}-{unit_dep}',
+            'RIGHT_ATTRS': {'ORTH': unit_text, 'DEP': unit_dep}
+        }
+        dependency_pattern.append(pattern_unit)
+
+    for i, unit in enumerate(parents):
+        if i == 0:
+            left_id = target_id
+        else:
+            prev_unit = parents[i-1]
+            prev_text, prev_dep = prev_unit
+            left_id = f'{prev_text}-{prev_dep}'
+
+        unit_text, unit_dep = unit
+        pattern_unit = {
+            'LEFT_ID': left_id,
+            'REL_OP': '<',
+            'RIGHT_ID': f'{unit_text}-{unit_dep}',
+            'RIGHT_ATTRS': {'ORTH': unit_text, 'DEP': unit_dep}
+        }
+        dependency_pattern.append(pattern_unit)
+    return dependency_pattern
+
 def extract(doc, pattern):
-    pattern_left_units, pattern_parent_units = pattern
-    pattern_left_len, pattern_parent_len = len(pattern_left_units), len(pattern_parent_units)
+    dependency_pattern = convert_to_dependency_pattern(pattern)
+    matcher.add('PATTERN', [dependency_pattern])
+    matches = matcher(doc)
+    matcher.remove('PATTERN')
 
     extractions = set()
+    for match in matches:
+        match_id, token_indices = match
+        target_index = token_indices[0]
+        target_text = doc[target_index].text
+        extractions.add(target_text)
 
-    # Break early if all of the words in the pattern don't also exist in the doc
-    pattern_words = {word[0] for side in pattern for unit in side for word in unit if len(side) > 0}
-    doc_words = {word.text for word in doc}
-    if not all({word in doc_words for word in pattern_words}):
-        return extractions
-
-    for sent in doc.sents:
-        # Skip this sentence if all of the words in the pattern don't also exist in the sentence
-        sent_words = {word.text for word in sent}
-        if not all({word in sent_words for word in pattern_words}):
-            continue
-        
-        for word in sent:
-            word_lefts = tuple([(left_token.text, left_token.dep_) for left_token in list(word.lefts)[-pattern_left_len:] if left_token.dep_ != 'compound'])
-            ancestorList = [word] + list(word.ancestors)
-            word_parents = tuple([(parent_token.head.text, parent_token.dep_) for parent_token in ancestorList[:pattern_parent_len]])
-            word_pattern = (word_lefts, word_parents)
-            if word_pattern == pattern:
-                # Make sure to add compound words together like boy choy instead of choy
-                compounds = [child.text for child in word.lefts if child.dep_ == 'compound']
-                compound_word = ' '.join(compounds + [word.text])
-                extractions.add(compound_word)
     return extractions
 
 def aye_aye(category, output, path, pickle_path, docs_path, development=False):
@@ -115,7 +137,7 @@ def aye_aye(category, output, path, pickle_path, docs_path, development=False):
 
         all_patterns = set()
         for doc in docs:
-            all_patterns.update(pattern_generation.extract_patterns(doc, lexicon, LEFT_TOKENS, PARENT_TOKENS, MIN_PATTERN_COMPLEXITY, MAX_PATTERN_COMPLEXITY))
+            all_patterns.update(pattern_generation.extract_patterns(doc, lexicon, LEFT_TOKENS, PARENT_TOKENS, RIGHT_TOKENS, MIN_PATTERN_COMPLEXITY, MAX_PATTERN_COMPLEXITY))
 
         if development:
             print('1: Patterns Extracted')

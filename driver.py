@@ -22,8 +22,8 @@ OPTIONS = {
     'truncation': False,
     'seed-selection': False,
     'recall': False,
-    'extraction': False,
-    'grading': True
+    'extraction': True,
+    'grading': False
 }
 
 def main():
