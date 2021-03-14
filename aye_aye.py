@@ -8,7 +8,8 @@ from datetime import datetime
 from collections import defaultdict
 import pickle
 from os.path import isfile
-from itertools import chain
+import itertools
+from operator import itemgetter
 
 import util
 import pattern_generation
@@ -19,11 +20,11 @@ LOOPS = 15
 MAX_TEXT_SIZE = 2000
 
 # Options for filtering what patterns autoslog will return
-LEFT_TOKENS=2
-PARENT_TOKENS=2
+LEFT_TOKENS=0
+PARENT_TOKENS=1
 RIGHT_TOKENS=0
 MIN_PATTERN_COMPLEXITY=1
-MAX_PATTERN_COMPLEXITY=4
+MAX_PATTERN_COMPLEXITY=1
 
 def avg_log(patterns, category, lexicon):
     # Creates a list of lists containing only category members
@@ -52,15 +53,18 @@ def convert_to_dependency_pattern(original_pattern):
     target_text, target_dep = target
     target_id = f'{target_text}-{target_dep}'
     dependency_pattern = [{'RIGHT_ID': target_id, 'RIGHT_ATTRS': {'DEP': target_dep}}]
-    for unit in chain(lefts, rights):
+
+    increment = 0
+    for unit in itertools.chain(lefts, rights):
         unit_text, unit_dep = unit
         pattern_unit = {
             'LEFT_ID': target_id,
             'REL_OP': '>',
-            'RIGHT_ID': f'{unit_text}-{unit_dep}',
+            'RIGHT_ID': f'{unit_text}-{unit_dep}-{increment}',
             'RIGHT_ATTRS': {'ORTH': unit_text, 'DEP': unit_dep}
         }
         dependency_pattern.append(pattern_unit)
+        increment += 1
 
     for i, unit in enumerate(parents):
         if i == 0:
@@ -68,32 +72,18 @@ def convert_to_dependency_pattern(original_pattern):
         else:
             prev_unit = parents[i-1]
             prev_text, prev_dep = prev_unit
-            left_id = f'{prev_text}-{prev_dep}'
+            left_id = f'{prev_text}-{prev_dep}-{increment-1}'
 
         unit_text, unit_dep = unit
         pattern_unit = {
             'LEFT_ID': left_id,
             'REL_OP': '<',
-            'RIGHT_ID': f'{unit_text}-{unit_dep}',
+            'RIGHT_ID': f'{unit_text}-{unit_dep}-{increment}',
             'RIGHT_ATTRS': {'ORTH': unit_text, 'DEP': unit_dep}
         }
         dependency_pattern.append(pattern_unit)
+        increment += 1
     return dependency_pattern
-
-def extract(doc, pattern):
-    dependency_pattern = convert_to_dependency_pattern(pattern)
-    matcher.add('PATTERN', [dependency_pattern])
-    matches = matcher(doc)
-    matcher.remove('PATTERN')
-
-    extractions = set()
-    for match in matches:
-        match_id, token_indices = match
-        target_index = token_indices[0]
-        target_text = doc[target_index].text
-        extractions.add(target_text)
-
-    return extractions
 
 def aye_aye(category, output, path, pickle_path, docs_path, development=False):
     print("Start Time:", datetime.now().strftime("%H:%M:%S"))
@@ -143,33 +133,52 @@ def aye_aye(category, output, path, pickle_path, docs_path, development=False):
             print('1: Patterns Extracted')
             progress = 0
             print(f'Total Patterns for Round {iteration+1}: {len(all_patterns)}')
-            
-        extracted_patterns = []
-        for pattern in all_patterns:
-            if pattern in extracted_patterns_dict:
-                extracted_patterns.append((pattern, extracted_patterns_dict[pattern]))
-            else:
-                extracted_pattern = set()
-                for doc in docs:
-                    extracted_pattern.update(extract(doc, pattern))
-                extracted_patterns_dict[pattern] = extracted_pattern
-                extracted_patterns.append((pattern, extracted_pattern))
-            if development:
-                if progress % 500 == 0:
-                    print(f'{round((progress/len(all_patterns)), 2)}% of the way finished extracting round {iteration+1}')
-                progress += 1
+
+        # Convert all pattern tuples to forms accepted by spaCy
+        # then add them to the matcher
+        # lastly, hash them so we can find the matches later.
+        matcher = DependencyMatcher(nlp.vocab)
+        hasher = {}
+        new_patterns = [pattern for pattern in all_patterns if pattern not in extracted_patterns_dict]
+        for pattern in new_patterns:
+            dependency_pattern = convert_to_dependency_pattern(pattern)
+            matcher.add(str(pattern), [dependency_pattern])
+            hasher[nlp.vocab.strings.add(str(pattern))] = pattern
 
         if development:
-            print('2: Extraction Done on All Potential Patterns')
+            print('2: Completed Pattern Conversion')
+
+        # Match on patterns and extract words
+        progress = 0
+        for doc in docs:
+            matches = matcher(doc)
+            for match in matches:
+                match_id, match_tokens = match
+                pattern = hasher[match_id]
+                target_token = doc[match_tokens[0]]
+                target_text = target_token.text
+                extracted_patterns_dict[pattern].add(target_text)
+            if development:
+                progress += 1
+                print(f'Made it {round((progress/len(docs))*100,2)}% of the way via extraction')
+
+        # Now extract the new patterns from the dict and add
+        # the extracted text
+        extracted_patterns = []
+        for pattern in all_patterns:
+            extracted_patterns.append((pattern, extracted_patterns_dict[pattern]))
+
+        if development:
+            print('3: Extraction Done on All Potential Patterns')
 
         scored_patterns = []
         for pattern_set in extracted_patterns:
             score = r_log_f(pattern_set[1], category, lexicon)
             scored_patterns.append((pattern_set[0], pattern_set[1], score))
-        scored_patterns.sort(key=lambda x: x[2], reverse=True)
+        scored_patterns.sort(key=itemgetter(2), reverse=True)
 
         if development:
-            print('3: Patterns Scored and Trimmed')
+            print('4: Patterns Scored and Trimmed')
 
         chosen_patterns = scored_patterns[:PATTERN_POOL_INIT_SIZE + iteration]
         candidate_words = set().union(*[chosen_pattern[1] for chosen_pattern in chosen_patterns])
@@ -180,13 +189,14 @@ def aye_aye(category, output, path, pickle_path, docs_path, development=False):
             candidate_word_patterns = [pattern for pattern in extracted_patterns if word in pattern[1]]
             score = avg_log(candidate_word_patterns, category, lexicon)
             scored_words.append((word, score))
-        scored_words.sort(key=lambda x: x[1], reverse=True)
+        scored_words.sort(key=itemgetter(1), reverse=True)
         chosen_words = [word[0] for word in scored_words[:WORDS_PER_ROUND]]
         generated_words += chosen_words
         lexicon = lexicon.union(set(chosen_words))
 
         if development:
-            print('4: Words Scored and Trimmed')
+            print('5: Words Scored and Trimmed')
+            print(f'This Rounds Words: {chosen_words}')
             print()
 
     print('Extracted Words...')
