@@ -2,7 +2,7 @@ import pandas as pd
 import math
 import spacy
 from spacy.matcher import DependencyMatcher
-nlp = spacy.load("en_core_web_md")
+nlp = spacy.load("en_core_web_sm")
 matcher = DependencyMatcher(nlp.vocab)
 from datetime import datetime
 from collections import defaultdict
@@ -10,6 +10,7 @@ import pickle
 from os.path import isfile
 import itertools
 from operator import itemgetter
+import numpy as np
 
 import util
 import pattern_generation
@@ -17,7 +18,7 @@ import pattern_generation
 PATTERN_POOL_INIT_SIZE = 20
 WORDS_PER_ROUND = 5
 LOOPS = 15
-MAX_TEXT_SIZE = 2000
+MAX_TEXT_SIZE = 500
 
 # Options for filtering what patterns autoslog will return
 LEFT_TOKENS=0
