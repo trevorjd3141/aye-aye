@@ -22,10 +22,10 @@ def extract_patterns(doc, lexicon, max_left=2, max_up=2, max_right=1, min_patter
         if token.text not in lexicon:
             continue
         target_unit = (token.text, token.dep_)
-        left_tokens = [token for token in token.lefts if token.dep_ != 'compound']
+        left_tokens = [token for token in token.lefts if token.dep_ != 'det' and token.dep_ != 'punct']
         left_units = tuple([(left_token.text, left_token.dep_) for left_token in left_tokens[-max_left:]])
-        parent_units = tuple([(parent_token.text, parent_token.dep_) for parent_token in list(token.ancestors)[:max_up] if parent_token.dep_ != 'ROOT'])
-        right_token = [token for token in token.rights if token.dep_ != 'compound']
+        parent_units = tuple([(parent_token.text, parent_token.dep_) for parent_token in list(token.ancestors)[:max_up] if parent_token.head.dep_ != 'ROOT'])
+        right_token = [token for token in token.rights if token.dep_ != 'det' and token.dep_ != 'punct']
         right_units = tuple([(right_token.text, right_token.dep_) for right_token in right_token[:max_right]])
         pattern_template = (target_unit, left_units, parent_units, right_units)
         patterns.update(expand_patterns(pattern_template, min_pattern_complexity, max_pattern_complexity))
