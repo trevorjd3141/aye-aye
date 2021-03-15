@@ -16,16 +16,18 @@ import util
 import pattern_generation
 
 PATTERN_POOL_INIT_SIZE = 20
-WORDS_PER_ROUND = 5
-LOOPS = 15
+PATTERN_POOL_SIZE_INCREASE = 2
+WORDS_PER_ROUND = 10
+MAX_PATTERN_USES = 3
+LOOPS = 10
 MAX_TEXT_SIZE = 500
 
-# Options for filtering what patterns autoslog will return
+# Options for filtering what patterns the generator will return
 LEFT_TOKENS=0
-PARENT_TOKENS=1
+PARENT_TOKENS=2
 RIGHT_TOKENS=0
-MIN_PATTERN_COMPLEXITY=1
-MAX_PATTERN_COMPLEXITY=1
+MIN_PATTERN_COMPLEXITY=2
+MAX_PATTERN_COMPLEXITY=2
 
 def avg_log(patterns, category, lexicon):
     # Creates a list of lists containing only category members
@@ -118,6 +120,8 @@ def aye_aye(category, output, path, pickle_path, docs_path, development=False):
     else:
         extracted_patterns_dict = defaultdict(set)
 
+    pattern_frequency_dict = defaultdict(int)
+
     if development:
         print('Pre Processing Done')
 
@@ -155,13 +159,13 @@ def aye_aye(category, output, path, pickle_path, docs_path, development=False):
             matches = matcher(doc)
             for match in matches:
                 match_id, match_tokens = match
-                pattern = hasher[match_id]
                 target_token = doc[match_tokens[0]]
                 target_text = target_token.text
+                pattern = hasher[match_id]
                 extracted_patterns_dict[pattern].add(target_text)
             if development:
                 progress += 1
-                print(f'Made it {round((progress/len(docs))*100,2)}% of the way via extraction')
+                print(f'Made it {round((progress/len(docs))*100, 2)}% of the way via extraction')
 
         # Now extract the new patterns from the dict and add
         # the extracted text
@@ -177,11 +181,16 @@ def aye_aye(category, output, path, pickle_path, docs_path, development=False):
             score = r_log_f(pattern_set[1], category, lexicon)
             scored_patterns.append((pattern_set[0], pattern_set[1], score))
         scored_patterns.sort(key=itemgetter(2), reverse=True)
+        scored_patterns = [scored_pattern for scored_pattern in scored_patterns if pattern_frequency_dict[scored_pattern[0]] <= MAX_PATTERN_USES]
 
         if development:
             print('4: Patterns Scored and Trimmed')
 
-        chosen_patterns = scored_patterns[:PATTERN_POOL_INIT_SIZE + iteration]
+        pattern_pool_size = PATTERN_POOL_INIT_SIZE + (PATTERN_POOL_SIZE_INCREASE * iteration)
+        chosen_patterns = scored_patterns[:pattern_pool_size]
+        for pattern in chosen_patterns:
+            pattern_frequency_dict[pattern[0]] += 1
+
         candidate_words = set().union(*[chosen_pattern[1] for chosen_pattern in chosen_patterns])
         candidate_words = candidate_words.difference(lexicon)
 
