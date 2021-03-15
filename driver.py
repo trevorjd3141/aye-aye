@@ -16,14 +16,14 @@ TRUNCATED_DATA = join(DATA_PATH, TRUNCATED_DATA_NAME)
 PICKLE = join(DATA_PATH, 'extractions.p')
 DOCS = join(DATA_PATH, 'docs.p')
 CATEGORY = 'noun.food'
-TRUNCATED_COUNT = 16000
+TRUNCATED_COUNT = 30000
 OPTIONS = {
     'preprocessing': False,
     'truncation': False,
     'seed-selection': False,
     'recall': False,
     'extraction': True,
-    'grading': False
+    'grading': True
 }
 
 def main():
