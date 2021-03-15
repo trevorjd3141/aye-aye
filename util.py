@@ -10,4 +10,10 @@ def fetch_lines(path):
 def categorize(word):
     choices = defaultdict(int)
     matches = wordnet.synsets(word)
-    return matches[0].lexname() if matches else 'None'
+    lexnames = [match.lexname() for match in matches]
+    if not matches:
+        return 'None'
+    elif 'noun.food' in lexnames:
+        return 'noun.food'
+    else:
+        return lexnames[0]
