@@ -200,6 +200,7 @@ def aye_aye(category, output, path, pickle_path, docs_path, development=False):
             score = avg_log(candidate_word_patterns, category, lexicon)
             scored_words.append((word, score))
         scored_words.sort(key=itemgetter(1), reverse=True)
+        scored_words = [word for word in scored_words if word[0].isalpha()]
         chosen_words = [word[0] for word in scored_words[:WORDS_PER_ROUND]]
         generated_words += chosen_words
         lexicon = lexicon.union(set(chosen_words))
