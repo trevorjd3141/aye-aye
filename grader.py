@@ -3,7 +3,9 @@ import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 
-IMPORTANT_MARKERS = (20, 40, 60, 80, 100)
+MAX_WORDS = 100
+SKIP = 5
+IMPORTANT_MARKERS = list(range(SKIP, MAX_WORDS, SKIP))
 
 def draw_graph(points, path):
     x = [point[0] for point in points]
@@ -46,7 +48,7 @@ def read(path, category):
     points = []
     for marker in IMPORTANT_MARKERS:
         if marker < len(data):
-            precision = round(len([result for result in data[:marker] if result[-1]])/total,2)
+            precision = round(len([result for result in data[:marker] if result[-1]])/marker, 2)
             points.append((marker, precision))
             print(f'Precision for the top {marker} extracted words is {precision}')
     draw_graph(points, f'{path}{category}-precision.png')
