@@ -13,7 +13,7 @@ def categorize(word):
     lexnames = [match.lexname() for match in matches]
     if not matches:
         return 'None'
-    elif 'noun.food' in lexnames:
-        return 'noun.food'
+    elif category in lexnames:
+        return category
     else:
         return lexnames[0]
