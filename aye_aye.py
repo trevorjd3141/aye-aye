@@ -23,13 +23,6 @@ LOOPS = 15
 MAX_TEXT_SIZE = 500
 MIN_EXTRACTIONS_PER_PATTERN = 3
 
-# Options for filtering what patterns the generator will return
-LEFT_TOKENS=2
-PARENT_TOKENS=2
-RIGHT_TOKENS=1
-MIN_PATTERN_COMPLEXITY=2
-MAX_PATTERN_COMPLEXITY=3
-
 def avg_log(patterns, category, lexicon):
     # Creates a list of lists containing only category members
     avg_log_members_extracted = 0
@@ -89,7 +82,15 @@ def convert_to_dependency_pattern(original_pattern):
         increment += 1
     return dependency_pattern
 
-def aye_aye(category, output, path, pickle_path, docs_path, development=False):
+def aye_aye(settings, output, path, pickle_path, docs_path, development=False):
+    # Unpacking the settings
+    category = settings['NAME']
+    LEFT_TOKENS = settings['LEFT_TOKENS']
+    PARENT_TOKENS = settings['PARENT_TOKENS']
+    RIGHT_TOKENS = settings['RIGHT_TOKENS']
+    MIN_PATTERN_COMPLEXITY = settings['MIN_PATTERN_COMPLEXITY']
+    MAX_PATTERN_COMPLEXITY = settings['MAX_PATTERN_COMPLEXITY']
+
     print("Start Time:", datetime.now().strftime("%H:%M:%S"))
     seeds = util.fetch_lines(f'seeds/{category}.seed')
     lexicon = set(seeds)

@@ -32,7 +32,7 @@ def read(path, category):
     total = len(words)
     correct = 0
     for word in words:
-        data.append([word, util.categorize(word), category, util.categorize(word) == category])
+        data.append([word, util.categorize(word, category), category, util.categorize(word, category) == category])
         if util.categorize(word) == category:
             correct += 1
     overall_precision = correct/total
