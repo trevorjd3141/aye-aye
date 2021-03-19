@@ -18,7 +18,6 @@ import pattern_generation
 PATTERN_POOL_INIT_SIZE = 20
 PATTERN_POOL_SIZE_INCREASE = 2
 WORDS_PER_ROUND = 10
-MAX_PATTERN_USES = 2
 LOOPS = 15
 MAX_TEXT_SIZE = 500
 MIN_EXTRACTIONS_PER_PATTERN = 3
@@ -46,9 +45,8 @@ def r_log_f(words, category, lexicon):
     return round(score, 3)
 
 def convert_to_dependency_pattern(original_pattern):
-    target, lefts, parents, rights, left_sibling, right_sibling = original_pattern
-    target_text, target_dep = target
-    target_id = f'{target_text}-{target_dep}'
+    target_dep, lefts, parents, rights, left_sibling, right_sibling = original_pattern
+    target_id = f'target-{target_dep}'
     dependency_pattern = [{'RIGHT_ID': target_id, 'RIGHT_ATTRS': {'DEP': target_dep}}]
 
     increment = 0
@@ -210,17 +208,13 @@ def aye_aye(settings, output, path, pickle_path, docs_path, development=False):
             score = r_log_f(pattern_set[1], category, lexicon)
             scored_patterns.append((pattern_set[0], pattern_set[1], score))
         scored_patterns.sort(key=itemgetter(2), reverse=True)
-        scored_patterns = [scored_pattern for scored_pattern in scored_patterns if pattern_frequency_dict[scored_pattern[0]] <= MAX_PATTERN_USES]
+        scored_patterns = [scored_pattern for scored_pattern in scored_patterns if not scored_pattern[1].issubset(lexicon)]
 
         if development:
             print('4: Patterns Scored and Trimmed')
 
         pattern_pool_size = PATTERN_POOL_INIT_SIZE + (PATTERN_POOL_SIZE_INCREASE * iteration)
         chosen_patterns = scored_patterns[:pattern_pool_size]
-        for pattern in chosen_patterns:
-            print(pattern)
-            pattern_frequency_dict[pattern[0]] += 1
-
         candidate_words = set().union(*[chosen_pattern[1] for chosen_pattern in chosen_patterns])
         candidate_words = candidate_words.difference(lexicon)
 

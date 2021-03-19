@@ -4,13 +4,13 @@ from itertools import product
 # of all subsets of it
 def expand_patterns(pattern_template, min_pattern_complexity, max_pattern_complexity):
     patterns = set()
-    target_unit, left_units, parent_units, right_units, left_sibling, right_sibling = pattern_template
+    target_dep, left_units, parent_units, right_units, left_sibling, right_sibling = pattern_template
 
     # Get all possible combinations of patterns from the pattern template
     # itertools creates a cartesian product between the factors of the pattern
     for i, j, k, l, m in product(range(len(left_units)+1), range(len(parent_units)+1), range(len(right_units)+1), range(len(left_sibling)+1), range(len(right_sibling)+1)):
         if i+j+k+l+m >= min_pattern_complexity and i+j+k+l+m <= max_pattern_complexity:
-            patterns.add((target_unit, left_units[:i], parent_units[:j], right_units[:k], left_sibling[:l], right_sibling[:m]))
+            patterns.add((target_dep, left_units[:i], parent_units[:j], right_units[:k], left_sibling[:l], right_sibling[:m]))
     return patterns
 
 # Patterns are in the form
@@ -21,7 +21,6 @@ def extract_patterns(doc, lexicon, max_left=2, max_up=2, max_right=1, left_sibli
     for token in doc:
         if token.lower_ not in lexicon:
             continue
-        target_unit = (token.lower_, token.dep_)
 
         left_tokens = [token for token in token.lefts if token.dep_ != 'det' and token.dep_ != 'punct']
         left_units = tuple([(left_token.lower_, left_token.dep_) for left_token in left_tokens[-max_left:]])
@@ -40,6 +39,6 @@ def extract_patterns(doc, lexicon, max_left=2, max_up=2, max_right=1, left_sibli
             left_sibling = ()
             right_sibling = ()
 
-        pattern_template = (target_unit, left_units, parent_units, right_units, left_sibling, right_sibling)
+        pattern_template = (token.dep_, left_units, parent_units, right_units, left_sibling, right_sibling)
         patterns.update(expand_patterns(pattern_template, min_pattern_complexity, max_pattern_complexity))
     return patterns
