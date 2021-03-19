@@ -46,7 +46,7 @@ def r_log_f(words, category, lexicon):
     return round(score, 3)
 
 def convert_to_dependency_pattern(original_pattern):
-    target, lefts, parents, rights = original_pattern
+    target, lefts, parents, rights, left_sibling, right_sibling = original_pattern
     target_text, target_dep = target
     target_id = f'{target_text}-{target_dep}'
     dependency_pattern = [{'RIGHT_ID': target_id, 'RIGHT_ATTRS': {'DEP': target_dep}}]
@@ -58,7 +58,7 @@ def convert_to_dependency_pattern(original_pattern):
             'LEFT_ID': target_id,
             'REL_OP': '>',
             'RIGHT_ID': f'{unit_text}-{unit_dep}-{increment}',
-            'RIGHT_ATTRS': {'ORTH': unit_text, 'DEP': unit_dep}
+            'RIGHT_ATTRS': {'LOWER': unit_text, 'DEP': unit_dep}
         }
         dependency_pattern.append(pattern_unit)
         increment += 1
@@ -76,7 +76,32 @@ def convert_to_dependency_pattern(original_pattern):
             'LEFT_ID': left_id,
             'REL_OP': '<',
             'RIGHT_ID': f'{unit_text}-{unit_dep}-{increment}',
-            'RIGHT_ATTRS': {'ORTH': unit_text, 'DEP': unit_dep}
+            'RIGHT_ATTRS': {'LOWER': unit_text, 'DEP': unit_dep}
+        }
+        dependency_pattern.append(pattern_unit)
+        increment += 1
+
+    if left_sibling:
+        # left sibling is a tuple of tuples but really should only have one unit
+        # making it a tuple of tuples is to make it consistent with everything else
+        # same goes for right sibling
+        unit_text, unit_dep = left_sibling[0]
+        pattern_unit = {
+            'LEFT_ID': target_id,
+            'REL_OP': '$-',
+            'RIGHT_ID': f'{unit_text}-{unit_dep}-{increment}',
+            'RIGHT_ATTRS': {'LOWER': unit_text, 'DEP': unit_dep}
+        }
+        dependency_pattern.append(pattern_unit)
+        increment += 1
+
+    if right_sibling:
+        unit_text, unit_dep = right_sibling[0]
+        pattern_unit = {
+            'LEFT_ID': target_id,
+            'REL_OP': '$+',
+            'RIGHT_ID': f'{unit_text}-{unit_dep}-{increment}',
+            'RIGHT_ATTRS': {'LOWER': unit_text, 'DEP': unit_dep}
         }
         dependency_pattern.append(pattern_unit)
         increment += 1
@@ -88,6 +113,8 @@ def aye_aye(settings, output, path, pickle_path, docs_path, development=False):
     LEFT_TOKENS = settings['LEFT_TOKENS']
     PARENT_TOKENS = settings['PARENT_TOKENS']
     RIGHT_TOKENS = settings['RIGHT_TOKENS']
+    LEFT_SIBLING = settings['LEFT_SIBLING']
+    RIGHT_SIBLING = settings['RIGHT_SIBLING']
     MIN_PATTERN_COMPLEXITY = settings['MIN_PATTERN_COMPLEXITY']
     MAX_PATTERN_COMPLEXITY = settings['MAX_PATTERN_COMPLEXITY']
 
@@ -191,6 +218,7 @@ def aye_aye(settings, output, path, pickle_path, docs_path, development=False):
         pattern_pool_size = PATTERN_POOL_INIT_SIZE + (PATTERN_POOL_SIZE_INCREASE * iteration)
         chosen_patterns = scored_patterns[:pattern_pool_size]
         for pattern in chosen_patterns:
+            print(pattern)
             pattern_frequency_dict[pattern[0]] += 1
 
         candidate_words = set().union(*[chosen_pattern[1] for chosen_pattern in chosen_patterns])
@@ -205,7 +233,7 @@ def aye_aye(settings, output, path, pickle_path, docs_path, development=False):
         scored_words = [word for word in scored_words if word[0].isalpha()]
         chosen_words = [word[0] for word in scored_words[:WORDS_PER_ROUND]]
         generated_words += chosen_words
-        lexicon = lexicon.union(set(chosen_words))
+        lexicon.update(set(chosen_words))
 
         if development:
             print('5: Words Scored and Trimmed')
