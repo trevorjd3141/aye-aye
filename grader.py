@@ -2,19 +2,28 @@ import util
 import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
+import itertools
 
-MAX_WORDS = 150
 SKIP = 5
-IMPORTANT_MARKERS = list(range(SKIP, MAX_WORDS, SKIP))
 
-def draw_graph(points, path):
+def draw_graph(category, data, path):
+    total_words = len(data)
+    important_markers = list(range(SKIP, total_words + SKIP, SKIP))
+    points = []
+    for marker in important_markers:
+        if marker <= total_words:
+            precision = round(len([result for result in data[:marker] if result[-1]])/marker, 2)
+            points.append((marker, precision))
+            print(f'Precision for the top {marker} extracted words is {precision}')
+
     x = [point[0] for point in points]
     y = [point[1] for point in points]
 
     fig, ax = plt.subplots()
     ax.plot(x, y)
-    ax.set(xlabel='Total Words', ylabel='Precision', title='Precision for Top-K Words')
+    ax.set(xlabel='Total Words', ylabel='Precision', title=f'{category.upper()} Precision Graph')
     ax.grid()
+    plt.xlim([important_markers[0], important_markers[-1]])
 
     fig.savefig(path)
 
@@ -45,13 +54,7 @@ def read(path, category):
     print(f'Labeled matches sent to {category}-results.csv')
     print()
 
-    points = []
-    for marker in IMPORTANT_MARKERS:
-        if marker < len(data):
-            precision = round(len([result for result in data[:marker] if result[-1]])/marker, 2)
-            points.append((marker, precision))
-            print(f'Precision for the top {marker} extracted words is {precision}')
-    draw_graph(points, f'{path}{category}-precision.png')
+    draw_graph(category, data, f'{path}{category}-precision.png')
     print()
 
     all_category_words = util.fetch_lines(f'recall\\{category}.txt')
