@@ -15,7 +15,7 @@ def expand_patterns(pattern_template, min_pattern_complexity, max_pattern_comple
 
 # Patterns are in the form
 # (unit) = (word, dep)
-# (tuple) = (target unit, left units, parent units, right_units, left sibling unit, right sibling unit)
+# (tuple) = (target dep, left units, parent units, right units, left sibling unit, right sibling unit)
 def extract_patterns(doc, lexicon, max_left=2, max_up=2, max_right=1, left_sibling=True, right_sibling=True, min_pattern_complexity=2, max_pattern_complexity=3):
     patterns = set()
     for token in doc:
