@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 
-MAX_WORDS = 100
+MAX_WORDS = 150
 SKIP = 5
 IMPORTANT_MARKERS = list(range(SKIP, MAX_WORDS, SKIP))
 
@@ -62,3 +62,4 @@ def read(path, category):
     print(f'Final Overall Precision: {round(overall_precision, 3)}')
     print(f'Final Overall Recall: {round(recall, 3)}')
     print(f'Final Overall F-Score: {round(f_score, 3)}')
+    print()

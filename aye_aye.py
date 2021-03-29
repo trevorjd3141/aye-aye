@@ -19,8 +19,7 @@ PATTERN_POOL_INIT_SIZE = 20
 PATTERN_POOL_SIZE_INCREASE = 2
 WORDS_PER_ROUND = 10
 LOOPS = 15
-MAX_TEXT_SIZE = 500
-MIN_EXTRACTIONS_PER_PATTERN = 3
+MAX_TEXT_SIZE = 300
 
 def avg_log(patterns, category, lexicon):
     # Creates a list of lists containing only category members
@@ -37,7 +36,7 @@ def r_log_f(words, category, lexicon):
     n = len(words)
     f = len([word for word in words if word in lexicon])
 
-    if n < MIN_EXTRACTIONS_PER_PATTERN or f == 0:
+    if n == 0 or f == 0:
         score = 0
     else:
         score = (f/n)*math.log(f,2)
