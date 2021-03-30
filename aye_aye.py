@@ -184,27 +184,32 @@ def aye_aye(settings, output, path, pickle_path, docs_path, development=False):
             if len(new_patterns) >= MAX_NEW_PATTERNS_PER_ROUND:
                 new_patterns = sample(new_patterns, MAX_NEW_PATTERNS_PER_ROUND)
 
-            for pattern in new_patterns:
-                dependency_pattern = convert_to_dependency_pattern(pattern)
-                matcher.add(str(pattern), [dependency_pattern])
-                hasher[nlp.vocab.strings.add(str(pattern))] = pattern
+            # If there are no new patterns skip round 2
+            if len(new_patterns) > 0:
+                for pattern in new_patterns:
+                    dependency_pattern = convert_to_dependency_pattern(pattern)
+                    matcher.add(str(pattern), [dependency_pattern])
+                    hasher[nlp.vocab.strings.add(str(pattern))] = pattern
 
-            if development:
-                print('2: Completed Pattern Conversion')
-
-            # Match on patterns and extract words
-            progress = 0
-            for doc in docs:
-                matches = matcher(doc)
-                for match in matches:
-                    match_id, match_tokens = match
-                    target_token = doc[match_tokens[0]]
-                    target_text = target_token.text
-                    pattern = hasher[match_id]
-                    extracted_patterns_dict[pattern].add(target_text)
                 if development:
-                    progress += 1
-                    print(f'Made it {round((progress/len(docs))*100, 2)}% of the way via extraction')
+                    print('2: Completed Pattern Conversion')
+
+                # Match on patterns and extract words
+                progress = 0
+                for doc in docs:
+                    matches = matcher(doc)
+                    for match in matches:
+                        match_id, match_tokens = match
+                        target_token = doc[match_tokens[0]]
+                        target_text = target_token.text
+                        pattern = hasher[match_id]
+                        extracted_patterns_dict[pattern].add(target_text)
+                    if development:
+                        progress += 1
+                        print(f'Made it {round((progress/len(docs))*100, 2)}% of the way via extraction')
+            else:
+                if development:
+                    print('2: No New Patterns on this Iteration')
 
             # Now extract the new patterns from the dict and add
             # the extracted text
@@ -219,7 +224,8 @@ def aye_aye(settings, output, path, pickle_path, docs_path, development=False):
             for pattern_set in extracted_patterns:
                 score = r_log_f(pattern_set[1], category, category_lexicon)
                 scored_patterns.append((pattern_set[0], pattern_set[1], score))
-            scored_pattern.sort(key=str(itemgetter(0)))
+            # Sort by score and then by pattern string
+            scored_patterns.sort(key=lambda x: str(x[0]))
             scored_patterns.sort(key=itemgetter(2), reverse=True)
             scored_patterns = [scored_pattern for scored_pattern in scored_patterns if not scored_pattern[1].issubset(set(category_lexicon))]
 
@@ -237,6 +243,7 @@ def aye_aye(settings, output, path, pickle_path, docs_path, development=False):
                 candidate_word_patterns = [pattern for pattern in extracted_patterns if word in pattern[1]]
                 score = avg_log(candidate_word_patterns, category, category_lexicon)
                 scored_words.append((word, score))
+            # Sort by score and then by word
             scored_words.sort(key=itemgetter(0))
             scored_words.sort(key=itemgetter(1), reverse=True)
             scored_words = [word for word in scored_words if word[0].isalpha()]
