@@ -11,6 +11,7 @@ from os.path import isfile
 import itertools
 from operator import itemgetter
 import numpy as np
+from random import sample
 
 import util
 import pattern_generation
@@ -20,6 +21,7 @@ PATTERN_POOL_SIZE_INCREASE = 1
 WORDS_PER_ROUND = 10
 LOOPS = 15
 MAX_TEXT_SIZE = 300
+MAX_NEW_PATTERNS_PER_ROUND = 2000
 
 def avg_log(patterns, category, lexicon):
     # Creates a list of lists containing only category members
@@ -177,6 +179,11 @@ def aye_aye(settings, output, path, pickle_path, docs_path, development=False):
             matcher = DependencyMatcher(nlp.vocab)
             hasher = {}
             new_patterns = [pattern for pattern in all_patterns if pattern not in extracted_patterns_dict]
+
+            # If new patterns is too large then randomly sample from it instead
+            if len(new_patterns) >= MAX_NEW_PATTERNS_PER_ROUND:
+                new_patterns = sample(new_patterns, MAX_NEW_PATTERNS_PER_ROUND)
+
             for pattern in new_patterns:
                 dependency_pattern = convert_to_dependency_pattern(pattern)
                 matcher.add(str(pattern), [dependency_pattern])
