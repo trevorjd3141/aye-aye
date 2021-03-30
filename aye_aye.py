@@ -219,6 +219,7 @@ def aye_aye(settings, output, path, pickle_path, docs_path, development=False):
             for pattern_set in extracted_patterns:
                 score = r_log_f(pattern_set[1], category, category_lexicon)
                 scored_patterns.append((pattern_set[0], pattern_set[1], score))
+            scored_pattern.sort(key=str(itemgetter(0)))
             scored_patterns.sort(key=itemgetter(2), reverse=True)
             scored_patterns = [scored_pattern for scored_pattern in scored_patterns if not scored_pattern[1].issubset(set(category_lexicon))]
 
@@ -236,6 +237,7 @@ def aye_aye(settings, output, path, pickle_path, docs_path, development=False):
                 candidate_word_patterns = [pattern for pattern in extracted_patterns if word in pattern[1]]
                 score = avg_log(candidate_word_patterns, category, category_lexicon)
                 scored_words.append((word, score))
+            scored_words.sort(key=itemgetter(0))
             scored_words.sort(key=itemgetter(1), reverse=True)
             scored_words = [word for word in scored_words if word[0].isalpha()]
             chosen_words = [word[0].lower() for word in scored_words[:WORDS_PER_ROUND]]
@@ -254,15 +256,16 @@ def aye_aye(settings, output, path, pickle_path, docs_path, development=False):
     for category in categories:
         category_seeds = seeds[category]
         category_lexicon = lexicons[category]
+        extracted_words = [word for word in category_lexicon if word not in category_seeds]
 
         if development:
             print('Extracted Words...')
-            print([word for word in category_lexicon if word not in category_seeds])
+            print(extracted_words)
             print()
 
         # Write the output of generated words
         file = open(f'{output}{category}.txt','w')
-        for word in category_lexicon:
+        for word in extracted_words:
             file.write(f'{word}\n')
         file.close()
 
