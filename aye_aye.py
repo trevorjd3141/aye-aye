@@ -19,7 +19,7 @@ import pattern_generation
 PATTERN_POOL_INIT_SIZE = 20
 PATTERN_POOL_SIZE_INCREASE = 1
 WORDS_PER_ROUND = 10
-LOOPS = 15
+LOOPS = 30
 MAX_TEXT_SIZE = 300
 MAX_NEW_PATTERNS_PER_ROUND = 2000
 
@@ -229,13 +229,18 @@ def aye_aye(settings, output, path, pickle_path, docs_path, development=False):
             scored_patterns.sort(key=itemgetter(2), reverse=True)
             scored_patterns = [scored_pattern for scored_pattern in scored_patterns if not scored_pattern[1].issubset(set(category_lexicon))]
 
-            if development:
-                print('4: Patterns Scored and Trimmed')
-
             pattern_pool_size = PATTERN_POOL_INIT_SIZE + (PATTERN_POOL_SIZE_INCREASE * iteration)
             chosen_patterns = scored_patterns[:pattern_pool_size]
             candidate_words = set(itertools.chain.from_iterable([chosen_pattern[1] for chosen_pattern in chosen_patterns]))
             previously_selected_words = list(itertools.chain.from_iterable([lexicons[category] for category in categories]))
+
+            if development:
+                print('4: Patterns Scored and Trimmed')
+                filtered_words = [word for word in candidate_words if word in previously_selected_words and word not in category_lexicon]
+                if len(filtered_words) > 0:
+                    print('Words Filtered By Mutual Exclusivity')
+                    print(filtered_words)
+
             candidate_words = filter(lambda x: x.lower() not in category_lexicon and x not in previously_selected_words, candidate_words)
 
             scored_words = []
