@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 import itertools
+import pickle
 
 SKIP = 5
 
@@ -14,7 +15,6 @@ def draw_graph(category, data, path):
         if marker <= total_words:
             precision = round(len([result for result in data[:marker] if result[-1]])/marker, 2)
             points.append((marker, precision))
-            print(f'Precision for the top {marker} extracted words is {precision}')
 
     x = [point[0] for point in points]
     y = [point[1] for point in points]
@@ -27,15 +27,30 @@ def draw_graph(category, data, path):
 
     fig.savefig(path)
 
+def units_to_string(units):
+    return ', '.join([str(unit) for unit in units]) if len(units) > 0 else ''
+
+def unit_to_string(unit):
+    return '' if unit == () else str(unit)
+
+def analyze_patterns(patterns, path):
+    data = []
+    for pattern in patterns:
+        target_dep, lefts, parents, rights, left_sibling, right_sibling = pattern
+        datum = [target_dep, units_to_string(lefts), units_to_string(parents), units_to_string(rights), unit_to_string(left_sibling), unit_to_string(right_sibling)]
+        data.append(datum)
+    df = pd.DataFrame(data, columns=['Target Depedency', 'Left Units', 'Ancestors', 'Right Units', 'Left Sibling', 'Right Sibling'])
+    df.to_csv(path, index=False)
+
 def calculate_f_score(recall, precision):
     if (recall + precision) == 0:
-        return 0.00
+        return 0.000
     score = (2 * recall * precision)/(precision + recall)
     return round(score, 3)
 
-# Reads in a results file and tests its accuracy
-def read(path, category):
-    words = util.fetch_lines(f'{path}{category}.txt')
+# Driver for the grader
+def read(input_path, output_path, category):
+    words = util.fetch_lines(f'{input_path}{category}.txt')
 
     data = []
     total = len(words)
@@ -47,14 +62,17 @@ def read(path, category):
     overall_precision = correct/total
     accuracy = 100 * overall_precision
     df = pd.DataFrame(data, columns=['Word', 'Correct Category', 'Guessed Category', 'Correct Guess'])
-    df.to_csv(f'{path}{category}-results.csv', index=False)
+    df.to_csv(f'{output_path}{category}-results.csv', index=False)
 
     print(f'Correctly guessed {correct} out of {total} words')
     print(f'For a total accuracy of {round(accuracy, 3)}%')
     print(f'Labeled matches sent to {category}-results.csv')
     print()
 
-    draw_graph(category, data, f'{path}{category}-precision.png')
+    draw_graph(category, data, f'{output_path}{category}-precision.png')
+    with open(f'{input_path}{category}-patterns.p', 'rb') as file: 
+        patterns = pickle.load(file)
+    analyze_patterns(patterns, f'{output_path}{category}-patterns.csv')
     print()
 
     all_category_words = util.fetch_lines(f'recall\\{category}.txt')

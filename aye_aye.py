@@ -19,9 +19,12 @@ import pattern_generation
 PATTERN_POOL_INIT_SIZE = 20
 PATTERN_POOL_SIZE_INCREASE = 1
 WORDS_PER_ROUND = 10
-LOOPS = 30
+LOOPS = 50
 MAX_TEXT_SIZE = 300
 MAX_NEW_PATTERNS_PER_ROUND = 2000
+# How often should progress be printed?
+# 100/PROGRESS_SKIP times
+PROGRESS_SKIP = 5
 
 def avg_log(patterns, category, lexicon):
     # Creates a list of lists containing only category members
@@ -140,9 +143,11 @@ def aye_aye(settings, output, path, pickle_path, docs_path, development=False):
     # Check for already extraced patterns
     if isfile(pickle_path):
         with open(pickle_path, 'rb') as file: 
-            extracted_patterns_dict = pickle.load(file) 
+            extracted_patterns_dict = pickle.load(file)
     else:
         extracted_patterns_dict = defaultdict(set)
+
+    top_patterns = defaultdict(set)
 
     if development:
         print('Pre Processing Done')
@@ -206,7 +211,8 @@ def aye_aye(settings, output, path, pickle_path, docs_path, development=False):
                         extracted_patterns_dict[pattern].add(target_text)
                     if development:
                         progress += 1
-                        print(f'Made it {round((progress/len(docs))*100, 2)}% of the way via extraction')
+                        if progress % PROGRESS_SKIP == 0:
+                            print(f'Made it {round((progress/len(docs))*100, 2)}% of the way via extraction')
             else:
                 if development:
                     print('2: No New Patterns on this Iteration')
@@ -231,6 +237,15 @@ def aye_aye(settings, output, path, pickle_path, docs_path, development=False):
 
             pattern_pool_size = PATTERN_POOL_INIT_SIZE + (PATTERN_POOL_SIZE_INCREASE * iteration)
             chosen_patterns = scored_patterns[:pattern_pool_size]
+
+            # Store the best pattern that hasn't already been chosen for later analysis
+            for chosen_pattern in chosen_patterns:
+                # Extract the literal pattern from the pattern set
+                pattern = chosen_pattern[0]
+                if pattern not in top_patterns[category]:
+                    top_patterns[category].add(pattern)
+                    break
+
             candidate_words = set(itertools.chain.from_iterable([chosen_pattern[1] for chosen_pattern in chosen_patterns]))
             previously_selected_words = list(itertools.chain.from_iterable([lexicons[category] for category in categories]))
 
@@ -269,11 +284,7 @@ def aye_aye(settings, output, path, pickle_path, docs_path, development=False):
         category_seeds = seeds[category]
         category_lexicon = lexicons[category]
         extracted_words = [word for word in category_lexicon if word not in category_seeds]
-
-        if development:
-            print('Extracted Words...')
-            print(extracted_words)
-            print()
+        patterns = top_patterns[category]
 
         # Write the output of generated words
         file = open(f'{output}{category}.txt','w')
@@ -281,5 +292,9 @@ def aye_aye(settings, output, path, pickle_path, docs_path, development=False):
             file.write(f'{word}\n')
         file.close()
 
+        # Write top patterns to output
+        file = open(f'{output}{category}-patterns.p','wb')
+        pickle.dump(patterns, file)
+        file.close()
 
     print("End Time:", datetime.now().strftime("%H:%M:%S"))

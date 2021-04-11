@@ -9,12 +9,14 @@ import grader
 
 # Data Paths
 OUTPUT_PATH = 'output\\'
-DATA_PATH = 'data\\'
+RAW_DATA_PATH = 'data\\raw\\'
+PICKLE_PATH = 'data\\memoization\\'
+INTERMEDIATE_DATA_PATH = 'data\\intermediate\\'
 PROCESSED_DATA_NAME = 'processed_data.csv'
-PROCESSED_DATA = join(DATA_PATH, PROCESSED_DATA_NAME)
-TRUNCATED_DATA = join(DATA_PATH, 'truncated_data.csv')
-PICKLE_PATH = join(DATA_PATH, 'extractions.p')
-DOCS = join(DATA_PATH, 'docs.p')
+PROCESSED_DATA = join(RAW_DATA_PATH, PROCESSED_DATA_NAME)
+TRUNCATED_DATA = join(RAW_DATA_PATH, 'truncated_data.csv')
+EXTRACTIONS_PATH = join(PICKLE_PATH, 'extractions.p')
+DOCS_PATH = join(PICKLE_PATH, 'docs.p')
 
 # Truncation Settings
 TRUNCATED_COUNT = 30000
@@ -23,11 +25,11 @@ TRUNCATED_COUNT = 30000
 MULTI_CATEGORICAL_LEARNING = True
 SETTINGS = [
     {'NAME': 'noun.person', 'LEFT_TOKENS': 2, 'PARENT_TOKENS': 3,
-    'RIGHT_TOKENS': 1, 'LEFT_SIBLING': True, 'RIGHT_SIBLING': True,
-    'MIN_PATTERN_COMPLEXITY': 2, 'MAX_PATTERN_COMPLEXITY': 3},
-    {'NAME': 'noun.food', 'LEFT_TOKENS': 2, 'PARENT_TOKENS': 2,
-    'RIGHT_TOKENS': 1, 'LEFT_SIBLING': True, 'RIGHT_SIBLING': True,
-    'MIN_PATTERN_COMPLEXITY': 2, 'MAX_PATTERN_COMPLEXITY': 3},
+    'RIGHT_TOKENS': 2, 'LEFT_SIBLING': True, 'RIGHT_SIBLING': True,
+    'MIN_PATTERN_COMPLEXITY': 1, 'MAX_PATTERN_COMPLEXITY': 4},
+    {'NAME': 'noun.food', 'LEFT_TOKENS': 2, 'PARENT_TOKENS': 3,
+    'RIGHT_TOKENS': 2, 'LEFT_SIBLING': True, 'RIGHT_SIBLING': True,
+    'MIN_PATTERN_COMPLEXITY': 1, 'MAX_PATTERN_COMPLEXITY': 4},
 ]
 
 # Driver Settings
@@ -59,15 +61,15 @@ def main():
 
     if OPTIONS['extraction']:
         if MULTI_CATEGORICAL_LEARNING:
-            aye_aye.aye_aye(SETTINGS, OUTPUT_PATH, TRUNCATED_DATA, PICKLE_PATH, DOCS, True)
+            aye_aye.aye_aye(SETTINGS, INTERMEDIATE_DATA_PATH, TRUNCATED_DATA, EXTRACTIONS_PATH, DOCS_PATH, True)
         else:
             for setting in SETTINGS:
-                aye_aye.aye_aye([setting], OUTPUT_PATH, TRUNCATED_DATA, PICKLE_PATH, DOCS, True)
+                aye_aye.aye_aye([setting], INTERMEDIATE_DATA_PATH, TRUNCATED_DATA, EXTRACTIONS_PATH, DOCS_PATH, True)
 
     if OPTIONS['grading']:
         for setting in SETTINGS:
             category = setting['NAME']
-            grader.read(OUTPUT_PATH, category)
+            grader.read(INTERMEDIATE_DATA_PATH, OUTPUT_PATH, category)
 
 if __name__ == "__main__":
     main()
