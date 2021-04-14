@@ -2,7 +2,7 @@ import pandas as pd
 import math
 import spacy
 from spacy.matcher import DependencyMatcher
-nlp = spacy.load("en_core_web_sm")
+nlp = spacy.load("en_core_web_md")
 matcher = DependencyMatcher(nlp.vocab)
 from datetime import datetime
 from collections import defaultdict
@@ -109,7 +109,7 @@ def convert_to_dependency_pattern(original_pattern):
         increment += 1
     return dependency_pattern
 
-def aye_aye(settings, output, path, pickle_path, docs_path, development=False):
+def aye_aye(settings, output, path, pickle_path, docs_path, mutual_exclusion, semantic_drift, development=False):
     print("Start Time:", datetime.now().strftime("%H:%M:%S"))
 
     categories = [category_settings['NAME'] for category_settings in settings]
@@ -212,7 +212,7 @@ def aye_aye(settings, output, path, pickle_path, docs_path, development=False):
                     if development:
                         progress += 1
                         if progress % PROGRESS_SKIP == 0:
-                            print(f'Made it {round((progress/len(docs))*100, 2)}% of the way via extraction')
+                            print(f'Made it {round((progress/len(docs))*100)}% of the way via extraction')
             else:
                 if development:
                     print('2: No New Patterns on this Iteration')
@@ -256,7 +256,8 @@ def aye_aye(settings, output, path, pickle_path, docs_path, development=False):
                     print('Words Filtered By Mutual Exclusivity')
                     print(filtered_words)
 
-            candidate_words = filter(lambda x: x.lower() not in category_lexicon and x not in previously_selected_words, candidate_words)
+            if mutual_exclusion:
+                candidate_words = filter(lambda x: x.lower() not in category_lexicon and x not in previously_selected_words, candidate_words)
 
             scored_words = []
             for word in candidate_words:

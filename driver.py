@@ -22,7 +22,9 @@ DOCS_PATH = join(PICKLE_PATH, 'docs.p')
 TRUNCATED_COUNT = 30000
 
 # Extraction Settings
+SEMANTIC_DRIFT_WEIGHTING = True
 MULTI_CATEGORICAL_LEARNING = True
+MUTUAL_EXCLUSION = True
 SETTINGS = [
     {'NAME': 'noun.person', 'LEFT_TOKENS': 2, 'PARENT_TOKENS': 3,
     'RIGHT_TOKENS': 2, 'LEFT_SIBLING': True, 'RIGHT_SIBLING': True,
@@ -61,10 +63,10 @@ def main():
 
     if OPTIONS['extraction']:
         if MULTI_CATEGORICAL_LEARNING:
-            aye_aye.aye_aye(SETTINGS, INTERMEDIATE_DATA_PATH, TRUNCATED_DATA, EXTRACTIONS_PATH, DOCS_PATH, True)
+            aye_aye.aye_aye(SETTINGS, INTERMEDIATE_DATA_PATH, TRUNCATED_DATA, EXTRACTIONS_PATH, DOCS_PATH, MUTUAL_EXCLUSION, SEMANTIC_DRIFT_WEIGHTING, True)
         else:
             for setting in SETTINGS:
-                aye_aye.aye_aye([setting], INTERMEDIATE_DATA_PATH, TRUNCATED_DATA, EXTRACTIONS_PATH, DOCS_PATH, True)
+                aye_aye.aye_aye([setting], INTERMEDIATE_DATA_PATH, TRUNCATED_DATA, EXTRACTIONS_PATH, DOCS_PATH, MUTUAL_EXCLUSION, SEMANTIC_DRIFT_WEIGHTING, True)
 
     if OPTIONS['grading']:
         for setting in SETTINGS:
