@@ -12,6 +12,7 @@ import itertools
 from operator import itemgetter
 import numpy as np
 from random import sample
+from statistics import mean
 
 import util
 import pattern_generation
@@ -25,6 +26,36 @@ MAX_NEW_PATTERNS_PER_ROUND = 2000
 # How often should progress be printed?
 # 100/PROGRESS_SKIP times
 PROGRESS_SKIP = 5
+
+# When filtering based on drift keep the
+# top WORDS_PER_ROUND + len(words) * DRIFT_PERCENTAGE words
+DRIFT_PERCENTAGE = 0.6
+
+def drift_filter(words, lexicon, count=WORDS_PER_ROUND):
+    print('words being drifted', len(words))
+    if len(words) <= count*2:
+        return words
+
+    firsts = lexicon[:count]
+    lasts = lexicon[-count:]
+    drift_scores = []
+    for word in words:
+        token = nlp(word)
+
+        first_similarities = [token.similarity(nlp(first)) for first in firsts]
+        first_similarity = mean(first_similarities)
+
+        last_similarities = [token.similarity(nlp(last)) for last in lasts]
+        last_similarity = mean(last_similarities)
+
+        drift_score = first_similarity/last_similarity
+        drift_scores.append((word, drift_score))
+    drift_scores.sort(key=itemgetter(1), reverse=True)
+    # for a drift percentage of 0.5 and 10 words per round this would be
+    # 10 + half the remaining words. Making sure to remove from the low scorers
+    number_kept = WORDS_PER_ROUND + round(DRIFT_PERCENTAGE*(len(words)-WORDS_PER_ROUND))
+    filtered_words = [word[0] for word in drift_scores][:number_kept]
+    return set(filtered_words)
 
 def avg_log(patterns, category, lexicon):
     # Creates a list of lists containing only category members
@@ -137,6 +168,7 @@ def aye_aye(settings, output, path, pickle_path, docs_path, mutual_exclusion, se
         if development:
             print('Performing Dependency Parsing')
         docs = [nlp(text) for text in joined_texts]
+        docs = [doc for doc in docs if len(doc) > 0]
         with open(docs_path, 'wb') as file:
             pickle.dump(docs, file)
     
@@ -247,17 +279,22 @@ def aye_aye(settings, output, path, pickle_path, docs_path, mutual_exclusion, se
                     break
 
             candidate_words = set(itertools.chain.from_iterable([chosen_pattern[1] for chosen_pattern in chosen_patterns]))
+            # Remove non alpha words
+            candidate_words = {word for word in candidate_words if word.isalpha()}
             previously_selected_words = list(itertools.chain.from_iterable([lexicons[category] for category in categories]))
 
             if development:
                 print('4: Patterns Scored and Trimmed')
+
+            if mutual_exclusion:
                 filtered_words = [word for word in candidate_words if word in previously_selected_words and word not in category_lexicon]
                 if len(filtered_words) > 0:
                     print('Words Filtered By Mutual Exclusivity')
                     print(filtered_words)
+                candidate_words = {word for word in candidate_words if word not in filtered_words}
 
-            if mutual_exclusion:
-                candidate_words = filter(lambda x: x.lower() not in category_lexicon and x not in previously_selected_words, candidate_words)
+            if semantic_drift:
+                candidate_words = drift_filter(candidate_words, lexicons[category])
 
             scored_words = []
             for word in candidate_words:
