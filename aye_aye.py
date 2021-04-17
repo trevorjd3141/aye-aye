@@ -18,7 +18,7 @@ import util
 import pattern_generation
 
 PATTERN_POOL_INIT_SIZE = 20
-PATTERN_POOL_SIZE_INCREASE = 1
+PATTERN_POOL_SIZE_INCREASE = 2
 WORDS_PER_ROUND = 10
 LOOPS = 50
 MAX_TEXT_SIZE = 300
@@ -31,24 +31,47 @@ PROGRESS_SKIP = 5
 # top WORDS_PER_ROUND + len(words) * DRIFT_PERCENTAGE words
 DRIFT_PERCENTAGE = 0.6
 
-def drift_filter(words, lexicon, count=WORDS_PER_ROUND):
-    print('words being drifted', len(words))
+def drift_filter(words, lexicon, drift_dict, count=WORDS_PER_ROUND):
     if len(words) <= count*2:
         return words
 
     firsts = lexicon[:count]
+    first_tokens = []
+    for first in firsts:
+        if first in drift_dict:
+            first_tokens.append(drift_dict[first])
+        else:
+            first_token = nlp(first)
+            first_tokens.append(first_token)
+            drift_dict[first] = first_token
+
     lasts = lexicon[-count:]
+    last_tokens = []
+    for last in lasts:
+        if last in drift_dict:
+            last_tokens.append(drift_dict[last])
+        else:
+            last_token = nlp(last)
+            last_tokens.append(last_token)
+            drift_dict[last] = last_token
+
     drift_scores = []
     for word in words:
-        token = nlp(word)
+        if word in drift_dict:
+            token = drift_dict[word]
+        else:
+            token = nlp(word)
+            drift_dict[word] = token
+        if not token.vector_norm:
+            continue
 
-        first_similarities = [token.similarity(nlp(first)) for first in firsts]
+        first_similarities = [token.similarity(first) for first in first_tokens if first.vector_norm]
         first_similarity = mean(first_similarities)
 
-        last_similarities = [token.similarity(nlp(last)) for last in lasts]
+        last_similarities = [token.similarity(last) for last in last_tokens if last.vector_norm]
         last_similarity = mean(last_similarities)
 
-        drift_score = first_similarity/last_similarity
+        drift_score = first_similarity/last_similarity if last_similarity > 0 else first_similarity*count
         drift_scores.append((word, drift_score))
     drift_scores.sort(key=itemgetter(1), reverse=True)
     # for a drift percentage of 0.5 and 10 words per round this would be
@@ -140,7 +163,7 @@ def convert_to_dependency_pattern(original_pattern):
         increment += 1
     return dependency_pattern
 
-def aye_aye(settings, output, path, pickle_path, docs_path, mutual_exclusion, semantic_drift, development=False):
+def aye_aye(settings, output, path, extractions_path, docs_path, drift_path, mutual_exclusion, semantic_drift, development=False):
     print("Start Time:", datetime.now().strftime("%H:%M:%S"))
 
     categories = [category_settings['NAME'] for category_settings in settings]
@@ -173,11 +196,17 @@ def aye_aye(settings, output, path, pickle_path, docs_path, mutual_exclusion, se
             pickle.dump(docs, file)
     
     # Check for already extraced patterns
-    if isfile(pickle_path):
-        with open(pickle_path, 'rb') as file: 
+    if isfile(extractions_path):
+        with open(extractions_path, 'rb') as file: 
             extracted_patterns_dict = pickle.load(file)
     else:
         extracted_patterns_dict = defaultdict(set)
+
+    if isfile(drift_path):
+        with open(drift_path, 'rb') as file: 
+            drift_dict = pickle.load(file)
+    else:
+        drift_dict = {}      
 
     top_patterns = defaultdict(set)
 
@@ -294,7 +323,7 @@ def aye_aye(settings, output, path, pickle_path, docs_path, mutual_exclusion, se
                 candidate_words = {word for word in candidate_words if word not in filtered_words}
 
             if semantic_drift:
-                candidate_words = drift_filter(candidate_words, lexicons[category])
+                candidate_words = drift_filter(candidate_words, lexicons[category], drift_dict)
 
             scored_words = []
             for word in candidate_words:
@@ -315,8 +344,12 @@ def aye_aye(settings, output, path, pickle_path, docs_path, mutual_exclusion, se
 
             # Save pattern extractions for next time
             # Make sure it saves after every iteration
-            with open(pickle_path, 'wb') as file: 
-                pickle.dump(extracted_patterns_dict, file) 
+            # Same with drift vectors
+            with open(extractions_path, 'wb') as file: 
+                pickle.dump(extracted_patterns_dict, file)
+
+            with open(drift_path, 'wb') as file: 
+                pickle.dump(drift_dict, file) 
     
     for category in categories:
         category_seeds = seeds[category]
