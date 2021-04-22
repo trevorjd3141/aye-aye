@@ -80,6 +80,12 @@ def read(input_path, output_path, category):
     recall = correct/total_category_words
     f_score = calculate_f_score(recall, overall_precision)
 
+    file = open(f'{output_path}/{category}-scores.txt','w')
+    file.write(f'Precision: {round(overall_precision, 3)}\n')
+    file.write(f'Recall: {round(recall, 3)}\n')
+    file.write(f'F-Score: {round(f_score, 3)}\n')
+    file.close()
+
     print(f'Final Overall Precision: {round(overall_precision, 3)}')
     print(f'Final Overall Recall: {round(recall, 3)}')
     print(f'Final Overall F-Score: {round(f_score, 3)}')

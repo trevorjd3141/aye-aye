@@ -329,12 +329,14 @@ def aye_aye(settings, output, path, extractions_path, docs_path, drift_path, mut
                 candidate_words = {word for word in candidate_words if word not in filtered_words}
 
             if semantic_drift:
+                print('Words Filtered By Semantic Drift')
                 candidate_words = drift_filter(candidate_words, lexicons[category], drift_dict)
 
             scored_words = []
+            category_lexicon_set = set(category_lexicon)
             for word in candidate_words:
                 candidate_word_patterns = [pattern for pattern in extracted_patterns if word in pattern[1]]
-                score = avg_log(candidate_word_patterns, category, category_lexicon)
+                score = avg_log(candidate_word_patterns, category, category_lexicon_set)
                 scored_words.append((word, score))
             # Sort by score and then by word
             scored_words.sort(key=itemgetter(0))
@@ -348,7 +350,9 @@ def aye_aye(settings, output, path, extractions_path, docs_path, drift_path, mut
                 print(f'This Rounds Words: {chosen_words}')
                 print()
 
-        if iteration+1 % SAVE_SKIP == 0:
+        if (iteration+1) % SAVE_SKIP == 0:
+            print('Saving extractions and drift tokens...')
+
             # Save pattern extractions for next time
             # Make sure it saves after every iteration
             # Same with drift vectors
