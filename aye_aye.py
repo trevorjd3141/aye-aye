@@ -22,10 +22,15 @@ PATTERN_POOL_SIZE_INCREASE = 2
 WORDS_PER_ROUND = 10
 LOOPS = 50
 MAX_TEXT_SIZE = 300
+LIMIT_NEW_PATTERNS_PER_ROUND = False
 MAX_NEW_PATTERNS_PER_ROUND = 2000
 # How often should progress be printed?
 # 100/PROGRESS_SKIP times
 PROGRESS_SKIP = 5
+
+# How often should the drift and extractions be saved
+# Every SAVE_SKIP rounds
+SAVE_SKIP = 10
 
 # When filtering based on drift keep the
 # top WORDS_PER_ROUND + len(words) * DRIFT_PERCENTAGE words
@@ -73,6 +78,7 @@ def drift_filter(words, lexicon, drift_dict, count=WORDS_PER_ROUND):
 
         drift_score = first_similarity/last_similarity if last_similarity > 0 else first_similarity*count
         drift_scores.append((word, drift_score))
+    drift_scores.sort(key=itemgetter(0))
     drift_scores.sort(key=itemgetter(1), reverse=True)
     # for a drift percentage of 0.5 and 10 words per round this would be
     # 10 + half the remaining words. Making sure to remove from the low scorers
@@ -247,7 +253,7 @@ def aye_aye(settings, output, path, extractions_path, docs_path, drift_path, mut
             new_patterns = [pattern for pattern in all_patterns if pattern not in extracted_patterns_dict]
 
             # If new patterns is too large then randomly sample from it instead
-            if len(new_patterns) >= MAX_NEW_PATTERNS_PER_ROUND:
+            if LIMIT_NEW_PATTERNS_PER_ROUND and len(new_patterns) >= MAX_NEW_PATTERNS_PER_ROUND:
                 new_patterns = sample(new_patterns, MAX_NEW_PATTERNS_PER_ROUND)
 
             # If there are no new patterns skip round 2
@@ -267,7 +273,7 @@ def aye_aye(settings, output, path, extractions_path, docs_path, drift_path, mut
                     for match in matches:
                         match_id, match_tokens = match
                         target_token = doc[match_tokens[0]]
-                        target_text = target_token.text
+                        target_text = target_token.text.lower()
                         pattern = hasher[match_id]
                         extracted_patterns_dict[pattern].add(target_text)
                     if development:
@@ -309,7 +315,7 @@ def aye_aye(settings, output, path, extractions_path, docs_path, drift_path, mut
 
             candidate_words = set(itertools.chain.from_iterable([chosen_pattern[1] for chosen_pattern in chosen_patterns]))
             # Remove non alpha words
-            candidate_words = {word for word in candidate_words if word.isalpha()}
+            candidate_words = {word for word in candidate_words if word.isalpha() and word not in lexicons[category]}
             previously_selected_words = list(itertools.chain.from_iterable([lexicons[category] for category in categories]))
 
             if development:
@@ -342,6 +348,7 @@ def aye_aye(settings, output, path, extractions_path, docs_path, drift_path, mut
                 print(f'This Rounds Words: {chosen_words}')
                 print()
 
+        if iteration+1 % SAVE_SKIP == 0:
             # Save pattern extractions for next time
             # Make sure it saves after every iteration
             # Same with drift vectors
@@ -358,13 +365,13 @@ def aye_aye(settings, output, path, extractions_path, docs_path, drift_path, mut
         patterns = top_patterns[category]
 
         # Write the output of generated words
-        file = open(f'{output}{category}.txt','w')
+        file = open(f'{output}/{category}.txt','w')
         for word in extracted_words:
             file.write(f'{word}\n')
         file.close()
 
         # Write top patterns to output
-        file = open(f'{output}{category}-patterns.p','wb')
+        file = open(f'{output}/{category}-patterns.p','wb')
         pickle.dump(patterns, file)
         file.close()
 
