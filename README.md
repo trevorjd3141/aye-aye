@@ -1,4 +1,4 @@
-# aye-aye
+# Aye-aye: Semantic Lexicon Induction
 
 A semi-supervised machine learning lexicon inductor! Given just a few examples this algorithm can learn any semantic category
 
